@@ -170,6 +170,7 @@ cnvs_inheritance <- function(sample_list, markers, results, raw_path,
           ### { MAKE THIS A FUNCTION
           # check fo missing values, otherwise the test returns ERROR if there
           # are to many of them
+          ## TO BE FIXED - the condition is always/often FALSE
           if (length(moth_ints_tmp[is.na(moth_ints_tmp)]) < 0.5*length(moth_ints_tmp) &
               length(fath_ints_tmp[is.na(fath_ints_tmp)]) < 0.5*length(fath_ints_tmp) &
               length(off_ints_tmp[is.na(off_ints_tmp)]) < 0.5*length(off_ints_tmp)) {
@@ -184,6 +185,15 @@ cnvs_inheritance <- function(sample_list, markers, results, raw_path,
             if (fpval >= alfa) inh <- "p.paternal"
             if (mpval >= alfa & fpval >= alfa) inh <- "p.CNP/ancestral/artifact"
             if (mpval < alfa & fpval < alfa) inh <- "denovo"
+
+            # Update DT
+            DT[sample_ID == samp & seg_ID == sid, `:=`(inheritance = inh, m_pval = mpval, p_pval = fpval)]
+
+            # Adjust p-value
+            if (adjust_pval){
+              DT[!is.na(m_pval) & !is.na(p_pval), `:=`(adj_m_pval = p.adjust(m_pval[!is.na(m_pval)]),
+                                                       adj_p_pval = p.adjust(p_pval[!is.na(p_pval)]))]
+            }
           }
           ### }
         }
@@ -205,19 +215,11 @@ cnvs_inheritance <- function(sample_list, markers, results, raw_path,
           fsd <- sd(fath_ints_tmp)
 
           # count the points of the offspring that are within the region
-          # mean+/-x*SD of both parents, where x is either 1 or 2 ATM
-          if (mmmethod == 2) {
-            mlen <- length(off_ints_tmp[off_ints_tmp >= mmean - 2*msd |
-                                          off_ints_tmp <= mmean + 2*msd])
-            flen <- length(off_ints_tmp[off_ints_tmp >= fmean - 2*fsd |
-                                          off_ints_tmp <= fmean + 2*fsd])
-          }
-          else {
-            mlen <- length(off_ints_tmp[off_ints_tmp >= mmean - msd |
-                                          off_ints_tmp <= mmean + msd])
-            flen <- length(off_ints_tmp[off_ints_tmp >= fmean - fsd |
-                                          off_ints_tmp <= fmean + fsd])
-          }
+          # mean+/-x*SD of both parents, where x is 2
+          mlen <- length(off_ints_tmp[off_ints_tmp >= mmean - 2*msd |
+                                      off_ints_tmp <= mmean + 2*msd])
+          flen <- length(off_ints_tmp[off_ints_tmp >= fmean - 2*fsd |
+                                      off_ints_tmp <= fmean + 2*fsd])
           # less than X% (50% at the moment) points from offspring are in the
           # tails, it could be inherited
           if (mlen >= 0.5 * length(off_ints_tmp))
@@ -237,19 +239,9 @@ cnvs_inheritance <- function(sample_list, markers, results, raw_path,
                     inheritance := "denovo"]
           ### }
         }
-
-        ### LA data.table FINALE SI PUO' AGGIORNARE QUI!!!!
-        DT[sample_ID == samp & seg_ID == sid, `:=`
-           (inheritance = inh, m_pval = mpval, p_pval = fpval)]
       }
     }
   }
-
-  if (adjust_pval == TRUE)
-    DT[!is.na(m_pval) & !is.na(p_pval),
-       `:=` (adj_m_pval = p.adjust(m_pval[!is.na(m_pval)]),
-             adj_p_pval = p.adjust(p_pval[!is.na(p_pval)])) ]
-
   return(DT)
 }
 

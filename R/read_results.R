@@ -235,15 +235,15 @@ DT_uniform_internal <- function(DT_in, markers, sex) {
         chr == "23" & CN < 2, GT := 1][
           chr == "23" & CN > 2, GT := 2]
   }
-  # Find mark_ID of the fisrt and last markers and compute "NP"
+  # Find mark_ID of the closest first and last markers and compute "NP"
   for (cc in unique(DT_in$chr)) {
     # intricate but works correctly
     DT_tmp <- DT_in[chr == cc, ]
     mm_tmp <- markers[chr == cc, ]
-    DT_in[chr == cc, `:=` (first_P = mm_tmp[match(DT_tmp[, start],
-                                                  mm_tmp[, start]), P_ID],
-                           last_P = mm_tmp[match(DT_tmp[, end],
-                                                 mm_tmp[, end]), P_ID])]
+    DT_in[chr == cc, `:=`(first_P = mm_tmp[sapply(DT_tmp[,start],
+                                                  function(z){which.min(abs(mm_tmp[, start] - z))}), P_ID],
+                          last_P  = mm_tmp[sapply(DT_tmp[,end],
+                                                  function(z){which.min(abs(mm_tmp[, end] - z))}), P_ID])]
   }
   setorder(DT_in, chr, start)
   DT_in[,`:=` (NP = last_P - first_P + 1, len = end - start + 1)]
